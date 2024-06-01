@@ -108,7 +108,7 @@ static Key keys[] = {
 	{ MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("discord-canary")},
 	{ MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
-	{ MODKEY|ShiftMask,             XK_m,      spawn,         SHCMD("element-desktop")},
+	{ MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_s,      spawn,         SHCMD("signal-desktop")},
 	{ MODKEY|ShiftMask,             XK_t,      spawn,         SHCMD("telegram-desktop")},
 };
