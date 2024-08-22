@@ -20,8 +20,8 @@ static const char col_blue[]        = "#09121b";
 static const char col_peach[]       = "#e48c85";
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_peach, col_gray1, col_gray1 },
-	[SchemeSel]  = { col_gray4, col_gray1,  col_blue },
+	[SchemeNorm] = { col_peach, col_blue, col_peach },
+	[SchemeSel]  = { col_gray4, col_blue,  col_blue },
 };
 
 /* tagging */
@@ -64,7 +64,7 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_gray1, "-sf", col_peach, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_blue, "-nf", col_gray3, "-sb", col_blue, "-sf", col_peach, NULL };
 static const char *termcmd[]  = { "kitty", NULL };
 
 static Key keys[] = {
@@ -109,6 +109,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
 	{ MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
+	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
 	{ MODKEY|ShiftMask,             XK_s,      spawn,         SHCMD("signal-desktop")},
 	{ MODKEY|ShiftMask,             XK_t,      spawn,         SHCMD("telegram-desktop")},
 };
