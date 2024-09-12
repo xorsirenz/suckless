@@ -65,12 +65,14 @@ static const Layout layouts[] = {
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_blue, "-nf", col_gray3, "-sb", col_blue, "-sf", col_peach, NULL };
-static const char *termcmd[]  = { "kitty", "-e", "tmux", NULL };
+static const char *termcmd[]  = { "kitty", NULL };
+static const char *termcmdTmux[]  = { "kitty", "-e", "tmux", NULL };
 
 static Key keys[] = {
 	/* modifier                     key        function        argument */
 	{ MODKEY,                       XK_d,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,                       XK_Return, spawn,          {.v = termcmd } },
+	{ MODKEY|ShiftMask,             XK_Return, spawn,          {.v = termcmdTmux } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
 	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
@@ -110,7 +112,7 @@ static Key keys[] = {
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
 	{ MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
-	{ MODKEY|ShiftMask,             XK_s,      spawn,         SHCMD("signal-desktop")},
+	{ MODKEY|ShiftMask,             XK_m,      spawn,         SHCMD("element-desktop-nightly")},
 	{ MODKEY|ShiftMask,             XK_t,      spawn,         SHCMD("telegram-desktop")},
 };
 
