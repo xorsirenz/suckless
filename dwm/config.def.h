@@ -108,11 +108,12 @@ static Key keys[] = {
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ControlMask,           XK_q,      quit,           {0} },
 	{ MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("discord-canary")},
+	{ MODKEY|ShiftMask,             XK_m,      spawn,         SHCMD("element-desktop-nightly")},
 	{ MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
+	{ MODKEY|ShiftMask,             XK_k,      spawn,         SHCMD("keybase-gui")},
 	{ MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
-	{ MODKEY|ShiftMask,             XK_m,      spawn,         SHCMD("element-desktop-nightly")},
 	{ MODKEY|ShiftMask,             XK_t,      spawn,         SHCMD("telegram-desktop")},
 };
 
