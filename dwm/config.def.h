@@ -112,6 +112,7 @@ static Key keys[] = {
 	{ MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
 	{ MODKEY|ShiftMask,             XK_k,      spawn,         SHCMD("keybase-gui")},
+    { MODKEY|ShiftMask,             XK_i,      spawn,         SHCMD("mullvad-browser")},
 	{ MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
 	{ MODKEY|ShiftMask,             XK_t,      spawn,         SHCMD("telegram-desktop")},
