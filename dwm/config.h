@@ -6,8 +6,8 @@ static const Gap default_gap        = {.isgap = 1, .realgap = 1, .gappx = 1};
 static const unsigned int snap      = 6;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "URW Gothic:size=10" };
-static const char dmenufont[]       = "URW Gothic:size=10";
+static const char *fonts[]          = { "URW Gothic:size=16" };
+static const char dmenufont[]       = "URW Gothic:size=16";
 static const char col_white[]       = "#ffffff";
 static const char col_blue[]        = "#09121b";
 static const char col_peach[]       = "#e48c85";
@@ -104,6 +104,11 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ControlMask,           XK_q,      quit,           {0} },
+    { MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("discord-canary")},
+    { MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
+	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
+    { MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
+	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
 };
 
 /* button definitions */
