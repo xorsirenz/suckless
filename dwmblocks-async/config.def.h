@@ -18,10 +18,10 @@
 
 // Define blocks for the status feed as X(icon, cmd, interval, signal).
 #define BLOCKS(X)             \
-    X("", "sb-packages", 5, 1) \
+    X("", "sb-packages", 300, 1) \
     X("", "sb-vpn", 5, 2) \
     X("", "sb-volume", 1, 3) \
     X("", "sb-battery", 5, 4) \
-    X("", "sb-date", 1, 5)
+    X("", "sb-time", 1, 5)
 
 #endif  // CONFIG_H
