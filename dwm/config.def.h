@@ -6,8 +6,8 @@ static const Gap default_gap        = {.isgap = 1, .realgap = 1, .gappx = 1};
 static const unsigned int snap      = 6;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
-static const char *fonts[]          = { "URW Gothic:size=16" };
-static const char dmenufont[]       = "URW Gothic:size=16";
+static const char *fonts[]          = { "Maple Mono:size=16" };
+static const char dmenufont[]       = "Maple Mono:size=16";
 static const char col_white[]       = "#ffffff";
 static const char col_blue[]        = "#09121b";
 static const char col_peach[]       = "#e48c85";
