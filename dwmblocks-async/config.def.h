@@ -22,6 +22,6 @@
     X("", "sb-vpn", 5, 2) \
     X("", "sb-volume", 1, 3) \
     X("", "sb-battery", 5, 4) \
-    X("", "date '+%H:%M'", 1, 5)
+    X("", "sb-date", 1, 5)
 
 #endif  // CONFIG_H
