@@ -2,10 +2,10 @@
 
 /* appearance */
 static const unsigned int borderpx  = 1;        /* border pixel of windows */
-static const Gap default_gap        = {.isgap = 1, .realgap = 1, .gappx = 1};
+static const Gap default_gap        = {.isgap = 0.5, .realgap = 0.5, .gappx = 0.5};
 static const unsigned int snap      = 6;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
-static const int topbar             = 1;        /* 0 means bottom bar */
+static const int topbar             = 0;        /* 0 means bottom bar */
 static const char *fonts[]          = { "Maple Mono:size=16" };
 static const char dmenufont[]       = "Maple Mono:size=16";
 static const char col_white[]       = "#ffffff";
