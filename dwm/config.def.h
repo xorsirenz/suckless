@@ -105,7 +105,7 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_9,                      8)
 	{ MODKEY|ControlMask,           XK_q,      quit,           {0} },
     { MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("discord-canary")},
-    { MODKEY,                       XK_w,      spawn,         SHCMD("firefox")},
+    { MODKEY|ShiftMask,             XK_w,      spawn,         SHCMD("brave")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
     { MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
