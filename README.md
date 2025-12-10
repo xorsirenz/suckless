@@ -1,1 +1,1 @@
-##### used with my [dotfiles](https://github.com/xorsirenz/dotfiles)
+##### used with my [dotfiles](https://codeberg.org/xorsirenz/dotfiles)
