@@ -9,7 +9,7 @@ static const int topbar             = 1;        /* 0 means bottom bar */
 static const char *fonts[]          = { "0xProto:size=16" };
 static const char dmenufont[]       = "0xProto:size=16";
 static const char col_white[]       = "#ffffff";
-static const char col_blue[]        = "#bae1ff";
+static const char col_blue[]        = "#09121b";
 static const char col_peach[]       = "#ffb3ba";
 static const char col_purple[]      = "#f1cbff";
 static const char col_green[]       = "#baffc9";
@@ -107,6 +107,7 @@ static const Key keys[] = {
     { MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("discord-canary")},
     { MODKEY|ShiftMask,             XK_w,      spawn,         SHCMD("brave")},
 	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
+    { MODKEY|ShiftMask,             XK_g,      spawn,         SHCMD("gajim")},
     { MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
 };
