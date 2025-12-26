@@ -10,13 +10,13 @@ static const char *fonts[]          = { "0xProto:size=16" };
 static const char dmenufont[]       = "0xProto:size=16";
 static const char col_white[]       = "#ffffff";
 static const char col_blue[]        = "#09121b";
-static const char col_peach[]       = "#ffb3ba";
-static const char col_purple[]      = "#f1cbff";
-static const char col_green[]       = "#baffc9";
+static const char col_rose[]       = "#ebbcba";
+static const char col_purple[]      = "#c4a7e7";
+static const char col_green[]       = "#31748f";
 static const char *colors[][3]      = {
 	/*               fg         bg         border   */
-	[SchemeNorm] = { col_peach, col_blue, col_peach },
-	[SchemeSel]  = { col_green, col_blue,  col_blue  },
+	[SchemeNorm] = { col_green, col_blue, col_rose },
+	[SchemeSel]  = { col_rose, col_blue,  col_blue  },
 };
 
 /* tagging */
@@ -60,7 +60,7 @@ static const Layout layouts[] = {
 
 /* commands */
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
-static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_blue, "-nf", col_green, "-sb", col_blue, "-sf", col_peach, NULL };
+static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_blue, "-nf", col_green, "-sb", col_blue, "-sf", col_rose, NULL };
 static const char *termcmd[]  = { "ghostty", NULL };
 static const char *termcmdTmux[]  = { "ghostty", "-e", "tmux", NULL };
 
