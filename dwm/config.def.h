@@ -106,7 +106,7 @@ static const Key keys[] = {
 	{ MODKEY|ControlMask,           XK_q,      quit,           {0} },
     { MODKEY|ShiftMask,             XK_d,      spawn,         SHCMD("Discord")},
     { MODKEY|ShiftMask,             XK_w,      spawn,         SHCMD("brave-browser")},
-	{ 0,                            XK_Print,  spawn,         SHCMD("flameshot gui")},
+	{ MODKEY|ShiftMask,             XK_s,      spawn,         SHCMD("flameshot gui")},
     { MODKEY|ShiftMask,             XK_g,      spawn,         SHCMD("gajim")},
     { MODKEY|ShiftMask,             XK_p,      spawn,         SHCMD("pidgin")},
 	{ MODKEY|ShiftMask,             XK_Delete, spawn,         SHCMD("poweroff")},
