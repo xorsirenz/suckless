@@ -128,6 +128,7 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 /* commands */
 static const char *menucmd[] = {
 	"dmenu-wl_run",
+    "-i",
 	"-m", "0",
     "-h", "30",
 	"-fn", dmenufont,
@@ -182,7 +183,7 @@ static const Key keys[] = {
 	{ MODKEY|WLR_MODIFIER_CTRL,  XKB_KEY_q,           quit,             {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_q,           killclient,       {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_w,           spawn,            SHCMD("brave-origin")},
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_d,           spawn,            SHCMD("Discord")},
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_d,           spawn,            SHCMD("discord")},
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_p,           spawn,            {.v = screenshotfilecmd} },
 	{ MODKEY,                    XKB_KEY_p,           spawn,            {.v = screenshotcmd} },
 
