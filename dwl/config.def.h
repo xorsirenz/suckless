@@ -139,6 +139,8 @@ static const char *menucmd[] = {
 };
 static const char *termcmd[] = { "ghostty", NULL };
 static const char *termcmdTmux[]  = { "ghostty", "-e", "tmux", NULL };
+static const char *screenshotcmd[] = { "sh", "-c", "grim -g \"$(slurp)\" - | wl-copy", NULL };
+static const char *screenshotfilecmd[] = { "sh", "-c", "grim -g \"$(slurp)\" \"$HOME/Pictures/Screenshots/screenshot-$(date +%Y-%m-%d_%H-%M-%S).png\"", NULL };
 
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: 2 -> at, etc. */
@@ -181,7 +183,8 @@ static const Key keys[] = {
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_q,           killclient,       {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_w,           spawn,            SHCMD("brave-origin")},
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_d,           spawn,            SHCMD("Discord")},
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_p,           spawn,            SHCMD("grim -g '$(slurp)' 'screenshot-$(date +%Y-%m-%d_%H-%M-%S).png'")},
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_p,           spawn,            {.v = screenshotfilecmd} },
+	{ MODKEY,                    XKB_KEY_p,           spawn,            {.v = screenshotcmd} },
 
 
 	/* Ctrl-Alt-Backspace and Ctrl-Alt-Fx used to be handled by X server */
