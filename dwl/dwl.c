@@ -60,6 +60,7 @@
 #include <wlr/types/wlr_xdg_decoration_v1.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 #include <xkbcommon/xkbcommon.h>
@@ -67,6 +68,7 @@
 #include <wlr/xwayland.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
+#include <wlr/xwayland/shell.h>
 #endif
 
 #include "dwl-ipc-unstable-v2-protocol.h"
@@ -407,6 +409,10 @@ static struct wlr_output_power_manager_v1 *power_mgr;
 static struct wlr_pointer_constraints_v1 *pointer_constraints;
 static struct wlr_relative_pointer_manager_v1 *relative_pointer_mgr;
 static struct wlr_pointer_constraint_v1 *active_constraint;
+
+static struct wlr_security_context_manager_v1 *security_context_manager;
+static struct wlr_export_dmabuf_manager_v1 *export_dmabuf_manager;
+static struct wlr_screencopy_manager_v1 *screencopy_manager;
 
 static struct wlr_cursor *cursor;
 static struct wlr_xcursor_manager *cursor_mgr;
@@ -2629,6 +2635,24 @@ setsel(struct wl_listener *listener, void *data)
 	wlr_seat_set_selection(seat, event->source, event->serial);
 }
 
+static bool
+filter_global(const struct wl_client *client,
+		const struct wl_global *global, void *data) {
+    const struct wlr_security_context_v1_state *security_context;
+#ifdef XWAYLAND
+    if (global == xwayland->shell_v1->global && client == xwayland->server->client) {
+        return true;
+    }
+#endif
+    security_context = wlr_security_context_manager_v1_lookup_client(security_context_manager, (struct wl_client *)client);
+    if (security_context != NULL) {
+        if (global == screencopy_manager->global || global == export_dmabuf_manager->global) {
+            return false;
+        }
+    }
+    return true;
+}
+
 void
 setup(void)
 {
@@ -2645,6 +2669,8 @@ setup(void)
 	 * clients from the Unix socket, managing Wayland globals, and so on. */
 	dpy = wl_display_create();
 	event_loop = wl_display_get_event_loop(dpy);
+
+    wl_display_set_global_filter(dpy, filter_global,NULL);
 
 	/* The backend is a wlroots feature which abstracts the underlying input and
 	 * output hardware. The autocreate option will choose the most suitable
@@ -2702,9 +2728,10 @@ setup(void)
 	compositor = wlr_compositor_create(dpy, 6, drw);
 	wlr_subcompositor_create(dpy);
 	wlr_data_device_manager_create(dpy);
-	wlr_export_dmabuf_manager_v1_create(dpy);
-	wlr_screencopy_manager_v1_create(dpy);
+    export_dmabuf_manager = wlr_export_dmabuf_manager_v1_create(dpy);
+    screencopy_manager = wlr_screencopy_manager_v1_create(dpy);
 	wlr_data_control_manager_v1_create(dpy);
+    security_context_manager = wlr_security_context_manager_v1_create(dpy);
 	wlr_ext_data_control_manager_v1_create(dpy, 1);
 	wlr_primary_selection_v1_device_manager_create(dpy);
 	wlr_viewporter_create(dpy);
