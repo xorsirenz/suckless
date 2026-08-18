@@ -1,0 +1,415 @@
+#include "modules/keyboard_state.hpp"
+
+#include <errno.h>
+#include <spdlog/spdlog.h>
+#include <string.h>
+
+#include <filesystem>
+
+extern "C" {
+#include <fcntl.h>
+#include <libinput.h>
+#include <linux/input-event-codes.h>
+#include <poll.h>
+#include <sys/inotify.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+}
+
+class errno_error : public std::runtime_error {
+ public:
+  int code;
+  errno_error(int code, const std::string& msg)
+      : std::runtime_error(getErrorMsg(code, msg.c_str())), code(code) {}
+  errno_error(int code, const char* msg) : std::runtime_error(getErrorMsg(code, msg)), code(code) {}
+
+ private:
+  static auto getErrorMsg(int err, const char* msg) -> std::string {
+    std::string error_msg{msg};
+    error_msg += ": ";
+
+#if (__GLIBC__ >= 2) && (__GLIBC_MINOR__ >= 32)
+    // strerrorname_np gets the error code's name; it's nice to have, but it's a recent GNU
+    // extension
+    const auto errno_name = strerrorname_np(err);
+    error_msg += errno_name;
+    error_msg += " ";
+#endif
+
+    const auto errno_str = strerror(err);
+    error_msg += errno_str;
+
+    return error_msg;
+  }
+};
+
+auto openFile(const std::string& path, int flags) -> int {
+  int fd = open(path.c_str(), flags);
+  if (fd < 0) {
+    if (errno == EACCES) {
+      throw errno_error(errno, "Can't open " + path + " (are you in the input group?)");
+    } else {
+      throw errno_error(errno, "Can't open " + path);
+    }
+  }
+  return fd;
+}
+
+auto closeFile(int fd) -> void {
+  int res = close(fd);
+  if (res < 0) {
+    throw errno_error(errno, "Can't close file");
+  }
+}
+
+auto openDevice(int fd) -> libevdev* {
+  libevdev* dev;
+  int err = libevdev_new_from_fd(fd, &dev);
+  if (err < 0) {
+    throw errno_error(-err, "Can't create libevdev device");
+  }
+  return dev;
+}
+
+auto supportsLockStates(const libevdev* dev) -> bool {
+  return libevdev_has_event_type(dev, EV_LED) && libevdev_has_event_code(dev, EV_LED, LED_NUML) &&
+         libevdev_has_event_code(dev, EV_LED, LED_CAPSL) &&
+         libevdev_has_event_code(dev, EV_LED, LED_SCROLLL);
+}
+
+auto isCommonFormatIcons(const Json::Value& config) -> bool {
+  return config["format-icons"].isObject() && (config["format-icons"]["locked"].isString() ||
+                                               config["format-icons"]["unlocked"].isString());
+}
+
+auto keyStateToIcons(const Json::Value& config)
+    -> std::unordered_map<std::string, std::vector<std::string>> {
+  std::unordered_map<std::string, std::vector<std::string>> key_icon_states;
+
+  if (isCommonFormatIcons(config)) {
+    std::vector<std::string> icons = {
+        config["format-icons"]["unlocked"].isString()
+            ? config["format-icons"]["unlocked"].asString()
+            : "unlocked",
+        config["format-icons"]["locked"].isString() ? config["format-icons"]["locked"].asString()
+                                                    : "locked",
+    };
+    key_icon_states["Lock"] = icons;
+    return key_icon_states;
+  }
+
+  const auto& format_icons = config["format-icons"];
+  for (const auto& key : std::vector<std::string>{"numlock", "capslock", "scrolllock"}) {
+    std::string map_key = key.substr(0, key.length() - 4);
+    map_key[0] = std::toupper(map_key[0]);
+    std::string unlocked = "unlocked";
+    std::string locked = "locked";
+    if (format_icons.isObject() && format_icons[key].isObject()) {
+      const auto& obj = format_icons[key];
+      if (obj["unlocked"].isString()) unlocked = obj["unlocked"].asString();
+      if (obj["locked"].isString()) locked = obj["locked"].asString();
+    }
+    key_icon_states[map_key] = {unlocked, locked};
+  }
+
+  return key_icon_states;
+}
+
+waybar::modules::KeyboardState::KeyboardState(const std::string& id, const Bar& bar,
+                                              const Json::Value& config)
+    : AModule(config, "keyboard-state", id, false, !config["disable-scroll"].asBool()),
+      box_(bar.orientation, 0),
+      numlock_label_(""),
+      capslock_label_(""),
+      numlock_format_(config_["format"].isString() ? config_["format"].asString()
+                      : config_["format"]["numlock"].isString()
+                          ? config_["format"]["numlock"].asString()
+                          : "{name} {icon}"),
+      capslock_format_(config_["format"].isString() ? config_["format"].asString()
+                       : config_["format"]["capslock"].isString()
+                           ? config_["format"]["capslock"].asString()
+                           : "{name} {icon}"),
+      scrolllock_format_(config_["format"].isString() ? config_["format"].asString()
+                         : config_["format"]["scrolllock"].isString()
+                             ? config_["format"]["scrolllock"].asString()
+                             : "{name} {icon}"),
+      interval_(
+          std::chrono::seconds(config_["interval"].isUInt() ? config_["interval"].asUInt() : 1)),
+      key_icon_states_(keyStateToIcons(config_)),
+      devices_path_("/dev/input/"),
+      libinput_(nullptr),
+      libinput_devices_({}) {
+  static struct libinput_interface interface = {
+      [](const char* path, int flags, void* user_data) { return open(path, flags); },
+      [](int fd, void* user_data) { close(fd); }};
+  if (config_["interval"].isUInt()) {
+    spdlog::warn("keyboard-state: interval is deprecated");
+  }
+
+  libinput_ = libinput_path_create_context(&interface, NULL);
+
+  box_.set_name("keyboard-state");
+  if (config_["numlock"].asBool()) {
+    numlock_label_.get_style_context()->add_class("numlock");
+    box_.pack_end(numlock_label_, false, false, 0);
+  }
+  if (config_["capslock"].asBool()) {
+    capslock_label_.get_style_context()->add_class("capslock");
+    box_.pack_end(capslock_label_, false, false, 0);
+  }
+  if (config_["scrolllock"].asBool()) {
+    scrolllock_label_.get_style_context()->add_class("scrolllock");
+    box_.pack_end(scrolllock_label_, false, false, 0);
+  }
+  if (!id.empty()) {
+    box_.get_style_context()->add_class(id);
+  }
+  box_.get_style_context()->add_class(MODULE_CLASS);
+  event_box_.add(box_);
+
+  if (config_["device-path"].isString()) {
+    std::string dev_path = config_["device-path"].asString();
+    tryAddDevice(dev_path);
+    if (libinput_devices_.empty()) {
+      spdlog::error("keyboard-state: Cannot find device {}", dev_path);
+    }
+  }
+
+  auto keys = config_["binding-keys"];
+  if (keys.isArray()) {
+    for (const auto& key : keys) {
+      if (key.isInt()) {
+        binding_keys.insert(key.asInt());
+      } else {
+        spdlog::warn("Cannot read key binding {} as int.", key.asString());
+      }
+    }
+  } else {
+    binding_keys.insert(KEY_CAPSLOCK);
+    binding_keys.insert(KEY_NUMLOCK);
+    binding_keys.insert(KEY_SCROLLLOCK);
+  }
+
+  DIR* dev_dir = opendir(devices_path_.c_str());
+  if (dev_dir == nullptr) {
+    throw errno_error(errno, "Failed to open " + devices_path_);
+  }
+  dirent* ep;
+  while ((ep = readdir(dev_dir))) {
+    if (ep->d_type == DT_DIR) continue;
+    std::string dev_path = devices_path_ + ep->d_name;
+    tryAddDevice(dev_path);
+  }
+
+  if (libinput_devices_.empty()) {
+    throw errno_error(errno, "Failed to find keyboard device");
+  }
+
+  libinput_thread_ = [this] {
+    dp.emit();
+    while (1) {
+      struct pollfd fd = {libinput_get_fd(libinput_), POLLIN, 0};
+      poll(&fd, 1, -1);
+      libinput_dispatch(libinput_);
+      struct libinput_event* event;
+      while ((event = libinput_get_event(libinput_))) {
+        auto type = libinput_event_get_type(event);
+        if (type == LIBINPUT_EVENT_KEYBOARD_KEY) {
+          auto keyboard_event = libinput_event_get_keyboard_event(event);
+          auto state = libinput_event_keyboard_get_key_state(keyboard_event);
+          if (state == LIBINPUT_KEY_STATE_RELEASED) {
+            uint32_t key = libinput_event_keyboard_get_key(keyboard_event);
+            if (binding_keys.contains(key)) {
+              dp.emit();
+            }
+          }
+        }
+        libinput_event_destroy(event);
+      }
+    }
+  };
+
+  hotplug_thread_ = [this] {
+    int fd;
+    fd = inotify_init();
+    if (fd < 0) {
+      spdlog::error("Failed to initialize inotify: {}", strerror(errno));
+      return;
+    }
+    inotify_add_watch(fd, devices_path_.c_str(), IN_CREATE | IN_DELETE);
+    while (1) {
+      int BUF_LEN = 1024 * (sizeof(struct inotify_event) + 16);
+      char buf[BUF_LEN];
+      int length = read(fd, buf, 1024);
+      if (length < 0) {
+        spdlog::error("Failed to read inotify: {}", strerror(errno));
+        return;
+      }
+      for (int i = 0; i < length;) {
+        struct inotify_event* event = (struct inotify_event*)&buf[i];
+        std::string dev_path = devices_path_ + event->name;
+        if (event->mask & IN_CREATE) {
+          // Wait for device setup
+          int timeout = 10;
+          while (timeout--) {
+            try {
+              int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
+              closeFile(fd);
+              break;
+            } catch (const errno_error& e) {
+              if (e.code == EACCES) {
+                sleep(1);
+              }
+            }
+          }
+          tryAddDevice(dev_path);
+        } else if (event->mask & IN_DELETE) {
+          std::lock_guard<std::mutex> lock(devices_mutex_);
+          auto it = libinput_devices_.find(dev_path);
+          if (it != libinput_devices_.end()) {
+            struct libinput_device* device = it->second;
+            // Erase from the map first so that a second IN_DELETE event for the
+            // same path becomes a no-op. This keeps removal idempotent and
+            // ensures libinput_path_remove_device()/libinput_device_unref() are
+            // called exactly once per device, avoiding a libinput list_remove
+            // assertion abort on double removal.
+            libinput_devices_.erase(it);
+            spdlog::info("Keyboard {} has been removed.", dev_path);
+            libinput_path_remove_device(device);
+            libinput_device_unref(device);
+          }
+        }
+        i += sizeof(struct inotify_event) + event->len;
+      }
+    }
+  };
+}
+
+waybar::modules::KeyboardState::~KeyboardState() {
+  std::lock_guard<std::mutex> lock(devices_mutex_);
+  for (const auto& [_, dev_ptr] : libinput_devices_) {
+    libinput_path_remove_device(dev_ptr);
+  }
+}
+
+auto waybar::modules::KeyboardState::update() -> void {
+  sleep(0);  // Wait for keyboard status change
+  int numl = 0, capsl = 0, scrolll = 0;
+
+  std::vector<std::string> dev_paths;
+  {
+    std::lock_guard<std::mutex> lock(devices_mutex_);
+    if (libinput_devices_.empty()) {
+      return;
+    }
+    if (config_["device-path"].isString() &&
+        libinput_devices_.find(config_["device-path"].asString()) != libinput_devices_.end()) {
+      // An explicit device was configured: read lock state from just that device.
+      dev_paths.push_back(config_["device-path"].asString());
+    } else {
+      // No explicit device: a multi-node keyboard may expose several event
+      // devices where only one of them actually toggles the lock LEDs. OR the
+      // LED values across all devices so a lock is reported on if any device
+      // reports it on.
+      for (const auto& [dev_path, _] : libinput_devices_) {
+        dev_paths.push_back(dev_path);
+      }
+    }
+  }
+  for (const auto& dev_path : dev_paths) {
+    try {
+      int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
+      libevdev* dev;
+      try {
+        dev = openDevice(fd);
+      } catch (...) {
+        // openDevice does not close the fd if libevdev_new_from_fd fails.
+        closeFile(fd);
+        throw;
+      }
+      numl |= libevdev_get_event_value(dev, EV_LED, LED_NUML);
+      capsl |= libevdev_get_event_value(dev, EV_LED, LED_CAPSL);
+      scrolll |= libevdev_get_event_value(dev, EV_LED, LED_SCROLLL);
+      libevdev_free(dev);
+      closeFile(fd);
+    } catch (const errno_error& e) {
+      // ENOTTY just means the device isn't an evdev device, skip it
+      if (e.code != ENOTTY) {
+        spdlog::warn(e.what());
+      }
+    }
+  }
+
+  struct {
+    bool state;
+    Gtk::Label& label;
+    const std::string& format;
+    const std::string name;
+  } label_states[] = {
+      {(bool)numl, numlock_label_, numlock_format_, "Num"},
+      {(bool)capsl, capslock_label_, capslock_format_, "Caps"},
+      {(bool)scrolll, scrolllock_label_, scrolllock_format_, "Scroll"},
+  };
+  for (auto& label_state : label_states) {
+    std::string text;
+    std::string map_key = isCommonFormatIcons(config_) ? "Lock" : label_state.name;
+
+    if (key_icon_states_.find(map_key) == key_icon_states_.end()) {
+      spdlog::warn("keyboard-state: Missing icon configuration for '{}'", map_key);
+      continue;
+    }
+
+    auto& icons = key_icon_states_[map_key];
+    if (icons.size() < 2) {
+      spdlog::warn("keyboard-state: Invalid icon vector size for '{}'", map_key);
+      continue;
+    }
+
+    text = fmt::format(fmt::runtime(label_state.format),
+                       fmt::arg("icon", label_state.state ? icons[1] : icons[0]),
+                       fmt::arg("name", label_state.name));
+    label_state.label.set_markup(text);
+    if (label_state.state) {
+      label_state.label.get_style_context()->add_class("locked");
+    } else {
+      label_state.label.get_style_context()->remove_class("locked");
+    }
+  }
+
+  AModule::update();
+}
+
+auto waybar::modules ::KeyboardState::tryAddDevice(const std::string& dev_path) -> void {
+  try {
+    int fd = openFile(dev_path, O_NONBLOCK | O_CLOEXEC | O_RDONLY);
+    libevdev* dev;
+    try {
+      dev = openDevice(fd);
+    } catch (...) {
+      // openDevice does not close the fd if libevdev_new_from_fd fails.
+      closeFile(fd);
+      throw;
+    }
+    if (supportsLockStates(dev)) {
+      spdlog::info("Found device {} at '{}'", libevdev_get_name(dev), dev_path);
+      std::lock_guard<std::mutex> lock(devices_mutex_);
+      if (libinput_devices_.find(dev_path) == libinput_devices_.end()) {
+        auto device = libinput_path_add_device(libinput_, dev_path.c_str());
+        if (device) {
+          libinput_device_ref(device);
+          libinput_devices_[dev_path] = device;
+        } else {
+          spdlog::warn("keyboard-state: Failed to add device to libinput: {}", dev_path);
+        }
+      }
+    }
+    libevdev_free(dev);
+    closeFile(fd);
+  } catch (const errno_error& e) {
+    // ENOTTY just means the device isn't an evdev device, skip it
+    if (e.code != ENOTTY) {
+      spdlog::warn(e.what());
+    }
+  }
+}
